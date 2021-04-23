@@ -1,8 +1,9 @@
 package app;
 
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
-import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -13,7 +14,6 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -28,8 +28,9 @@ public class winampWindow extends Application {
     private final static int WIDTH = 900;
     private final static int HEIGHT = 600;
     private static double DEFAULT_VOLUME = 0.3F;
+    private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
 
-    private Button playPause;
+    private Button playPauseButton;
     private Button skipButton;
     private Button prevButton;
 
@@ -39,11 +40,12 @@ public class winampWindow extends Application {
         window.setTitle("MusicApp v1.1");
         loadSongs();
 
-
-        Menu songOptions = new Menu("Options");
+        Menu playlistOptions = new Menu("_Playlist");
+        Menu sortOptions = new Menu("_Sort");
+        Menu helpOptions = new Menu("_Help");
+        Menu viewOptions = new Menu("_View");
         MenuBar menuBar = new MenuBar();
-        menuBar.getMenus().addAll(songOptions);
-
+        menuBar.getMenus().addAll(playlistOptions, sortOptions, viewOptions, helpOptions);
 
 
         Label musicInfo = new Label("\uD83D\uDD0A");
@@ -69,7 +71,7 @@ public class winampWindow extends Application {
 
 
         HBox volumeButtons = new HBox(5);
-        volumeButtons.getChildren().addAll(prevButton, playPause, skipButton);
+        volumeButtons.getChildren().addAll(prevButton, playPauseButton, skipButton);
 
         HBox volumeControls = new HBox(5);
         volumeControls.getChildren().addAll(musicInfo, volumeSlider);
@@ -101,11 +103,39 @@ public class winampWindow extends Application {
                         new CornerRadii(5.0),
                         new Insets(-1.0))));
 
+        ObservableList<String> songList = FXCollections.observableArrayList();
+        songList.addAll(getSongNames());
+        ListView<String> songListView = new ListView<>();
+        songListView.setItems(songList);
+        songListView.setPrefWidth(200);
+        songListView.setPrefHeight(HEIGHT-40);
+        songListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        songListView.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> {
+                    String help = songListView.getSelectionModel().getSelectedItem();
+                        songIterator = songs.listIterator();
+                        String s="";
+                        while(true) {
+                            if(((s = songIterator.next()).equals(directory+"\\"+help))) {
+                                break;
+                            }
+                        }
+                        mediaView.getMediaPlayer().stop();
+                        mediaPlayer.stop();
+                        playMusic(directory+"\\"+help);
+                        playPauseButton.setText("⏸");
+                } );
+
+
+        StackPane songListPane = new StackPane();
+        songListPane.getChildren().addAll( songListView);
+        songListPane.setPadding(new Insets(5,5,5,5));
+
         mainLayout = new BorderPane();
 
         mainLayout.setBottom(volumeLabel);
         mainLayout.setTop(menuBar);
-        //
+        mainLayout.setLeft(songListPane);
 
 
         if(songIterator.hasNext()) {
@@ -126,6 +156,15 @@ public class winampWindow extends Application {
         primaryStage.show();
     }
 
+    private ArrayList<String> getSongNames() {
+        ArrayList<String> names = new ArrayList<>();
+        for(String s : songs) {
+            names.add(s.substring(s.lastIndexOf("\\") + 1));
+        }
+        return names;
+    }
+
+
     private void playMusic(String musicFile) {
         mediaPlayer = new MediaPlayer(new Media(Paths.get(musicFile).toUri().toString()));
         mediaView = new MediaView(mediaPlayer);
@@ -139,14 +178,12 @@ public class winampWindow extends Application {
                 mediaPlayer.stop();
                 mediaView.getMediaPlayer().pause();
                 playMusic(songIterator.next());
-
             }
         });
     }
 
     private void loadSongs() {
         try {
-            File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
             File[] songFiles = directory.listFiles((dir, name) -> name.endsWith("mp3") || name.endsWith("mp4"));
             assert songFiles != null : "No files";
             for (File songFile : songFiles) {
@@ -159,18 +196,18 @@ public class winampWindow extends Application {
     }
 
     public void createVolumeButtons() {
-        playPause = new Button("▶");
-        playPause.setMinWidth(30);
-        playPause.setMinHeight(30);
-        playPause.setOnAction(e -> {
+        playPauseButton = new Button("▶");
+        playPauseButton.setMinWidth(30);
+        playPauseButton.setMinHeight(30);
+        playPauseButton.setOnAction(e -> {
             if(mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) {
                 mediaPlayer.pause();
                 mediaView.getMediaPlayer().pause();
-                playPause.setText("▶");
+                playPauseButton.setText("▶");
             } else {
                 mediaPlayer.play();
                 mediaView.getMediaPlayer().play();
-                playPause.setText("⏸");
+                playPauseButton.setText("⏸");
             }
         });
 
@@ -180,7 +217,6 @@ public class winampWindow extends Application {
         skipButton.setOnAction(e -> {
             mediaPlayer.stop();
             mediaView.getMediaPlayer().stop();
-            playPause.setText("⏸");
             if(songIterator.hasNext())
                 playMusic(songIterator.next());
         });
@@ -190,6 +226,7 @@ public class winampWindow extends Application {
         prevButton.setMinWidth(25);
         prevButton.setOnAction(e -> {
             mediaPlayer.stop();
+            mediaView.getMediaPlayer().stop();
             if(songIterator.hasPrevious())
                 playMusic(songIterator.previous());
         });
