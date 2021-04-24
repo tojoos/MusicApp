@@ -6,12 +6,14 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -19,6 +21,12 @@ import java.util.ArrayList;
 import java.util.ListIterator;
 
 public class winampWindow extends Application {
+    private final static int WIDTH = 900;
+    private final static int HEIGHT = 600;
+    private static double DEFAULT_VOLUME = 0.3F;
+
+    private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
+
     private final ArrayList<String> songs = new ArrayList<>();
     private ListIterator<String> songIterator;
     private ListView<String> songListView;
@@ -26,29 +34,37 @@ public class winampWindow extends Application {
     private MediaView mediaView;
     private Stage window;
     private BorderPane mainLayout;
-    private final static int WIDTH = 900;
-    private final static int HEIGHT = 600;
-    private static double DEFAULT_VOLUME = 0.3F;
-    private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
+    private Duration duration;
 
     private Button playPauseButton;
     private Button skipButton;
     private Button prevButton;
 
+    private Menu playlistOptions;
+    private Menu sortOptions;
+    private Menu helpOptions;
+    private Menu viewOptions;
+    private MenuBar menuBar;
+
     private Slider progressionBar;
+
+    private Label timeLabel;
 
     @Override
     public void start(Stage primaryStage) {
         window = primaryStage;
         window.setTitle("MusicApp v1.1");
+        //icon setup
+        window.getIcons().add(new Image(winampWindow.class.getResourceAsStream("icon\\icon.png")));
+
+        //load playlists
         loadSongs();
 
-        Menu playlistOptions = new Menu("_Playlist");
-        Menu sortOptions = new Menu("_Sort");
-        Menu helpOptions = new Menu("_Help");
-        Menu viewOptions = new Menu("_View");
-        MenuBar menuBar = new MenuBar();
-        menuBar.getMenus().addAll(playlistOptions, sortOptions, viewOptions, helpOptions);
+        //create buttons
+        createVolumeButtons();
+
+        //create menu
+        createMenu();
 
 
         Label musicInfo = new Label("\uD83D\uDD0A");
@@ -63,49 +79,6 @@ public class winampWindow extends Application {
         });
 
 
-        //Volume buttons creation
-        createVolumeButtons();
-
-        //to do
-        progressionBar = new Slider();
-        progressionBar.setPrefWidth(WIDTH-120);
-
-
-
-
-
-        HBox volumeButtons = new HBox(5);
-        volumeButtons.getChildren().addAll(prevButton, playPauseButton, skipButton);
-
-        HBox volumeControls = new HBox(5);
-        volumeControls.getChildren().addAll(musicInfo, volumeSlider);
-
-        GridPane volumePane = new GridPane();
-
-        //volumePane.setGridLinesVisible(true);
-        volumePane.setHgap(20);
-        volumePane.setVgap(5);
-        volumePane.setPadding(new Insets(5,5,2,5));
-        volumePane.add(progressionBar,3,0);
-
-
-        GridPane volumePane2 = new GridPane();
-
-        //volumePane2.setGridLinesVisible(true);
-        volumePane2.setHgap(20);
-        volumePane2.setVgap(5);
-        volumePane2.setPadding(new Insets(2,5,5,5));
-        volumePane2.add(volumeControls, 31, 0);
-        volumePane2.add(volumeButtons, 20, 0);
-
-
-        VBox volumeLabel = new VBox(0);
-        volumeLabel.setPadding(new Insets(5,5,5,5));
-        volumeLabel.getChildren().addAll(volumePane, volumePane2);
-        volumeLabel.setBackground(new Background(new BackgroundFill
-                (Color.rgb(177,177,177,0.7),
-                        new CornerRadii(5.0),
-                        new Insets(-1.0))));
 
         ObservableList<String> songList = FXCollections.observableArrayList();
         songList.addAll(getSongNames());
@@ -129,10 +102,61 @@ public class winampWindow extends Application {
                         playPauseButton.setText("⏸");
                 } );
 
+        Label playlistLabel = new Label("Current playlist: Playlist1");
+        playlistLabel.setBackground(new Background(new BackgroundFill
+                (Color.rgb(177,177,177,0.9),
+                        new CornerRadii(2.0),
+                        new Insets(0))));
 
-        StackPane songListPane = new StackPane();
-        songListPane.getChildren().addAll( songListView);
+        GridPane songListPane = new GridPane();
+        songListPane.add(playlistLabel,0,0);
+        songListPane.add(songListView,0,1);
         songListPane.setPadding(new Insets(5,5,5,5));
+
+        //to do
+        progressionBar = new Slider();
+        progressionBar.setPrefWidth(WIDTH-166);
+
+        //test
+        timeLabel = new Label("TE:ST/TE:ST");
+        timeLabel.setPrefWidth(65);
+
+
+        HBox volumeButtons = new HBox(5);
+        volumeButtons.getChildren().addAll(prevButton, playPauseButton, skipButton);
+
+        HBox volumeControls = new HBox(5);
+        volumeControls.getChildren().addAll(musicInfo, volumeSlider);
+
+        GridPane volumePane = new GridPane();
+
+        //volumePane.setGridLinesVisible(true);
+        volumePane.setHgap(20);
+        volumePane.setVgap(5);
+        volumePane.setPadding(new Insets(5,5,2,5));
+        volumePane.add(progressionBar,2,0);
+        volumePane.add(timeLabel,1,0,1,1);
+
+
+        GridPane volumePane2 = new GridPane();
+
+        //volumePane2.setGridLinesVisible(true);
+        volumePane2.setHgap(20);
+        volumePane2.setVgap(5);
+        volumePane2.setPadding(new Insets(2,5,5,5));
+        volumePane2.add(volumeControls, 31, 0);
+        volumePane2.add(volumeButtons, 20, 0);
+
+
+        VBox volumeLabel = new VBox(0);
+        volumeLabel.setPadding(new Insets(5,5,5,5));
+        volumeLabel.getChildren().addAll(volumePane, volumePane2);
+        volumeLabel.setBackground(new Background(new BackgroundFill
+                (Color.rgb(177,177,177,0.7),
+                        new CornerRadii(5.0),
+                        new Insets(-1.0))));
+
+
 
         mainLayout = new BorderPane();
 
@@ -150,6 +174,7 @@ public class winampWindow extends Application {
             mainLayout.setCenter(mediaView);
             playPauseButton.setText("▶");
         }
+
 
         Scene scene = new Scene(mainLayout,WIDTH,HEIGHT);
         window.setScene(scene);
@@ -186,6 +211,7 @@ public class winampWindow extends Application {
             }
         });
     }
+
 
     private void loadSongs() {
         try {
@@ -238,6 +264,14 @@ public class winampWindow extends Application {
         });
     }
 
+    private void createMenu() {
+        playlistOptions = new Menu("_Playlist");
+        sortOptions = new Menu("_Sort");
+        helpOptions = new Menu("_Help");
+        viewOptions = new Menu("_View");
+        menuBar = new MenuBar();
+        menuBar.getMenus().addAll(playlistOptions, sortOptions, viewOptions, helpOptions);
+    }
 
     public static void main(String[] args) {
         launch(args);
