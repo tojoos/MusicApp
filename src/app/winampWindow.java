@@ -21,6 +21,7 @@ import java.util.ListIterator;
 public class winampWindow extends Application {
     private final ArrayList<String> songs = new ArrayList<>();
     private ListIterator<String> songIterator;
+    private ListView<String> songListView;
     private MediaPlayer mediaPlayer;
     private MediaView mediaView;
     private Stage window;
@@ -33,6 +34,8 @@ public class winampWindow extends Application {
     private Button playPauseButton;
     private Button skipButton;
     private Button prevButton;
+
+    private Slider progressionBar;
 
     @Override
     public void start(Stage primaryStage) {
@@ -64,8 +67,9 @@ public class winampWindow extends Application {
         createVolumeButtons();
 
         //to do
-        Slider progressionBar = new Slider();
+        progressionBar = new Slider();
         progressionBar.setPrefWidth(WIDTH-120);
+
 
 
 
@@ -105,7 +109,7 @@ public class winampWindow extends Application {
 
         ObservableList<String> songList = FXCollections.observableArrayList();
         songList.addAll(getSongNames());
-        ListView<String> songListView = new ListView<>();
+        songListView = new ListView<>();
         songListView.setItems(songList);
         songListView.setPrefWidth(200);
         songListView.setPrefHeight(HEIGHT-40);
@@ -114,9 +118,8 @@ public class winampWindow extends Application {
                 .addListener((observable, oldValue, newValue) -> {
                     String help = songListView.getSelectionModel().getSelectedItem();
                         songIterator = songs.listIterator();
-                        String s="";
                         while(true) {
-                            if(((s = songIterator.next()).equals(directory+"\\"+help))) {
+                            if((songIterator.next().equals(directory+"\\"+help))) {
                                 break;
                             }
                         }
@@ -145,6 +148,7 @@ public class winampWindow extends Application {
             mediaView.setFitHeight(500);
             mediaView.setFitWidth(600);
             mainLayout.setCenter(mediaView);
+            playPauseButton.setText("▶");
         }
 
         Scene scene = new Scene(mainLayout,WIDTH,HEIGHT);
@@ -171,6 +175,7 @@ public class winampWindow extends Application {
         mediaView.setFitHeight(500);
         mediaView.setFitWidth(600);
         mainLayout.setCenter(mediaView);
+        songListView.getSelectionModel().select(musicFile.substring(musicFile.lastIndexOf("\\")+1));
         mediaPlayer.play();
         mediaPlayer.setVolume(DEFAULT_VOLUME);
         mediaPlayer.setOnEndOfMedia(() -> {
@@ -196,6 +201,7 @@ public class winampWindow extends Application {
     }
 
     public void createVolumeButtons() {
+
         playPauseButton = new Button("▶");
         playPauseButton.setMinWidth(30);
         playPauseButton.setMinHeight(30);
