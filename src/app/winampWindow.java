@@ -24,6 +24,8 @@ public class winampWindow extends Application {
     private final static int WIDTH = 900;
     private final static int HEIGHT = 600;
     private static double DEFAULT_VOLUME = 0.3F;
+    private double rememberVolume;
+    private boolean isMuted = false;
 
     private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
 
@@ -39,6 +41,7 @@ public class winampWindow extends Application {
     private Button playPauseButton;
     private Button skipButton;
     private Button prevButton;
+    private Button muteButton;
 
     private Menu playlistOptions;
     private Menu sortOptions;
@@ -47,6 +50,7 @@ public class winampWindow extends Application {
     private MenuBar menuBar;
 
     private Slider progressionBar;
+    private Slider volumeSlider;
 
     private Label timeLabel;
 
@@ -61,24 +65,13 @@ public class winampWindow extends Application {
         loadSongs();
 
         //create buttons
-        createVolumeButtons();
+        createButtons();
 
         //create menu
         createMenu();
 
-
-        Label musicInfo = new Label("\uD83D\uDD0A");
-
-        Slider volumeSlider = new Slider(0.0,100.0,30.0);
-
-        volumeSlider.setPrefWidth(111);
-        volumeSlider.setPrefHeight(10);
-        volumeSlider.valueProperty().addListener((obs, oldV, newV) -> {
-            DEFAULT_VOLUME = volumeSlider.getValue()/100.0;
-            mediaPlayer.setVolume(DEFAULT_VOLUME);
-        });
-
-
+        //create sliders (currently only volume slider)
+        createSliders();
 
         ObservableList<String> songList = FXCollections.observableArrayList();
         songList.addAll(getSongNames());
@@ -113,12 +106,22 @@ public class winampWindow extends Application {
         songListPane.add(songListView,0,1);
         songListPane.setPadding(new Insets(5,5,5,5));
 
-        //to do
+        //progressionBar - listener is working but valueFollower not :(
         progressionBar = new Slider();
         progressionBar.setPrefWidth(WIDTH-166);
+        progressionBar.valueProperty().addListener((observable, oldValue, newValue) -> {
+                //case where mediaView haven't started yet
+                mediaView.getMediaPlayer().play();
+                mediaPlayer.seek(duration.multiply((Double)newValue/100.0));
+                mediaView.getMediaPlayer().seek(duration.multiply((Double)newValue/100.0));
+        });
 
         //test
         timeLabel = new Label("TE:ST/TE:ST");
+        timeLabel.setBackground(new Background(new BackgroundFill
+                (Color.rgb(177,177,177,0.6),
+                        new CornerRadii(2.0),
+                        new Insets(-1))));
         timeLabel.setPrefWidth(65);
 
 
@@ -126,7 +129,7 @@ public class winampWindow extends Application {
         volumeButtons.getChildren().addAll(prevButton, playPauseButton, skipButton);
 
         HBox volumeControls = new HBox(5);
-        volumeControls.getChildren().addAll(musicInfo, volumeSlider);
+        volumeControls.getChildren().addAll(muteButton, volumeSlider);
 
         GridPane volumePane = new GridPane();
 
@@ -144,7 +147,7 @@ public class winampWindow extends Application {
         volumePane2.setHgap(20);
         volumePane2.setVgap(5);
         volumePane2.setPadding(new Insets(2,5,5,5));
-        volumePane2.add(volumeControls, 31, 0);
+        volumePane2.add(volumeControls, 29, 0);
         volumePane2.add(volumeButtons, 20, 0);
 
 
@@ -155,7 +158,8 @@ public class winampWindow extends Application {
                 (Color.rgb(177,177,177,0.7),
                         new CornerRadii(5.0),
                         new Insets(-1.0))));
-
+        volumeLabel.setPrefWidth(WIDTH);
+        volumeLabel.setPrefHeight(HEIGHT/7);
 
 
         mainLayout = new BorderPane();
@@ -168,21 +172,22 @@ public class winampWindow extends Application {
         if(songIterator.hasNext()) {
             playMusic(songIterator.next());
             mediaPlayer.pause();
-            mediaPlayer = new MediaPlayer(new Media(new File(songs.get(0)).toURI().toString()));
-            mediaView.setFitHeight(500);
-            mediaView.setFitWidth(600);
-            mainLayout.setCenter(mediaView);
+            mediaView.getMediaPlayer().pause();
             playPauseButton.setText("▶");
         }
 
 
+
         Scene scene = new Scene(mainLayout,WIDTH,HEIGHT);
+        //to do - stylesheets
+        scene.getStylesheets().add(getClass().getResource("myStyle.css").toString());
         window.setScene(scene);
         window.setMinWidth(WIDTH+25);
         window.setMinHeight(HEIGHT+25);
         window.setMaxWidth(WIDTH+25);
         window.setMaxHeight(HEIGHT+25);
         primaryStage.show();
+
     }
 
     private ArrayList<String> getSongNames() {
@@ -194,12 +199,25 @@ public class winampWindow extends Application {
     }
 
 
-    private void playMusic(String musicFile) {
+    private void playMusic(String musicFile) { //double opening -> to be fixed
         mediaPlayer = new MediaPlayer(new Media(Paths.get(musicFile).toUri().toString()));
-        mediaView = new MediaView(mediaPlayer);
+        //duration listener (total track length)
+        mediaPlayer.setOnReady(() -> {
+            if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN)
+            duration = mediaPlayer.getMedia().getDuration();
+            System.out.println(duration);
+        });
+        if(musicFile.contains(".mp4")) {
+            mediaView = new MediaView(mediaPlayer);
+        } else {
+            mediaView = new MediaView(new MediaPlayer(new Media(Paths.get("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\backgroundvideo\\mp3replacement.mp4").toUri().toString())));
+            mediaView.getMediaPlayer().setOnEndOfMedia(() -> mediaView.getMediaPlayer().seek(Duration.ZERO));
+            mediaView.getMediaPlayer().play();
+        }
         mediaView.setFitHeight(500);
         mediaView.setFitWidth(600);
         mainLayout.setCenter(mediaView);
+
         songListView.getSelectionModel().select(musicFile.substring(musicFile.lastIndexOf("\\")+1));
         mediaPlayer.play();
         mediaPlayer.setVolume(DEFAULT_VOLUME);
@@ -226,11 +244,11 @@ public class winampWindow extends Application {
         }
     }
 
-    public void createVolumeButtons() {
+    public void createButtons() {
 
         playPauseButton = new Button("▶");
-        playPauseButton.setMinWidth(30);
-        playPauseButton.setMinHeight(30);
+        playPauseButton.setPrefWidth(40);
+        playPauseButton.setPrefHeight(40);
         playPauseButton.setOnAction(e -> {
             if(mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) {
                 mediaPlayer.pause();
@@ -244,8 +262,8 @@ public class winampWindow extends Application {
         });
 
         skipButton = new Button("⏭");
-        skipButton.setMinHeight(25);
-        skipButton.setMinWidth(25);
+        skipButton.setPrefHeight(30);
+        skipButton.setPrefWidth(30);
         skipButton.setOnAction(e -> {
             mediaPlayer.stop();
             mediaView.getMediaPlayer().stop();
@@ -254,13 +272,51 @@ public class winampWindow extends Application {
         });
 
         prevButton = new Button("⏮");
-        prevButton.setMinHeight(25);
-        prevButton.setMinWidth(25);
+        prevButton.setPrefHeight(30);
+        prevButton.setPrefWidth(30);
         prevButton.setOnAction(e -> {
             mediaPlayer.stop();
             mediaView.getMediaPlayer().stop();
             if(songIterator.hasPrevious())
                 playMusic(songIterator.previous());
+        });
+
+        //mute button - done!
+        muteButton = new Button("\uD83D\uDD0A");
+        muteButton.getStyleClass().clear();
+        muteButton.setStyle("-fx-font-size: 18;");
+        muteButton.setPrefHeight(20);
+        muteButton.setPrefWidth(20);
+        muteButton.setOnAction(e -> {
+            System.out.println(isMuted);
+            if(isMuted) {
+                muteButton.setText("\uD83D\uDD0A");
+                isMuted = true;
+                volumeSlider.setValue(rememberVolume);
+            } else {
+                muteButton.setText("\uD83D\uDD07");
+                isMuted = false;
+                rememberVolume = DEFAULT_VOLUME*100;
+                volumeSlider.setValue(0.0);
+            }
+        });
+    }
+
+    private void createSliders() {
+        volumeSlider = new Slider(0.0,100.0,30.0);
+        volumeSlider.setPrefWidth(120);
+        volumeSlider.setPrefHeight(10);
+        volumeSlider.setPadding(new Insets(5,0,0,0));
+        volumeSlider.valueProperty().addListener((obs, oldV, newV) -> {
+            DEFAULT_VOLUME = volumeSlider.getValue()/100.0;
+            mediaPlayer.setVolume(DEFAULT_VOLUME);
+            if(volumeSlider.getValue()==0.0) {
+                isMuted = true;
+                muteButton.setText("\uD83D\uDD07");
+            } else {
+                isMuted = false;
+                muteButton.setText("\uD83D\uDD0A");
+            }
         });
     }
 
