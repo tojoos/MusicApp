@@ -115,6 +115,7 @@ public class winampWindow extends Application {
                 //case where mediaView haven't started yet
                 if(mediaView.getMediaPlayer().getStatus() == MediaPlayer.Status.READY)
                     mediaView.getMediaPlayer().play();
+                //assurance value will be changed manually not by listener
                 if(Math.abs(newValue.floatValue()-oldValue.floatValue())>1.5) {
                     mediaPlayer.seek(duration.multiply((Double) newValue / 100.0));
                     mediaView.getMediaPlayer().seek(duration.multiply((Double) newValue / 100.0));
@@ -122,11 +123,7 @@ public class winampWindow extends Application {
         });
 
         //test
-        timeLabel = new Label("TE:ST/TE:ST");
-        timeLabel.setBackground(new Background(new BackgroundFill
-                (Color.rgb(177,177,177,0.6),
-                        new CornerRadii(2.0),
-                        new Insets(-1))));
+        timeLabel = new Label("0:00/0:00");
         timeLabel.setPrefWidth(65);
 
 
@@ -181,8 +178,6 @@ public class winampWindow extends Application {
             playPauseButton.setText("▶");
         }
 
-
-
         Scene scene = new Scene(mainLayout,WIDTH,HEIGHT);
         //to do - stylesheets
         scene.getStylesheets().add(getClass().getResource("myStyle.css").toString());
@@ -206,15 +201,22 @@ public class winampWindow extends Application {
 
     private void playMusic(String musicFile) { //double opening -> to be fixed
         mediaPlayer = new MediaPlayer(new Media(Paths.get(musicFile).toUri().toString()));
+
         //duration listener (total track length)
         mediaPlayer.setOnReady(() -> {
             if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN)
             duration = mediaPlayer.getMedia().getDuration();
+            //to get default time for first track
+            updateTimeLabel();
         });
         mediaPlayer.currentTimeProperty().addListener((O, oldValue, newValue) -> {
-            if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN && mediaPlayer.getStatus() != MediaPlayer.Status.STOPPED);
-            progressionBar.setValue(newValue.toMillis()/duration.toMillis()*100);
+            if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN) {
+                progressionBar.setValue(newValue.toMillis() / duration.toMillis() * 100);
+                updateTimeLabel();
+            }
         });
+
+
 
         if(musicFile.contains(".mp4")) {
             mediaView = new MediaView(mediaPlayer);
@@ -253,8 +255,40 @@ public class winampWindow extends Application {
         }
     }
 
-    public void createButtons() {
+    private void updateTimeLabel() {
+        double totalTime = duration.toSeconds();
+        double timeInSec = Math.round(mediaPlayer.getCurrentTime().toSeconds());
+        int minutes=0, seconds;
+        int totalMinutes=0, totalSeconds;
+        String timeString="";
+        if(timeInSec >= 60)
+            minutes = (int) Math.round(timeInSec / 60);
+        seconds = (int) Math.round(timeInSec % 60);
 
+        if(totalTime >= 60)
+            totalMinutes = (int) Math.round(totalTime / 60);
+        totalSeconds = (int) Math.round(totalTime % 60);
+
+        timeString += minutes + ":";
+
+        if(seconds<10) {
+            timeString += "0" + seconds;
+        } else {
+            timeString += seconds;
+        }
+
+        timeString += "/" + totalMinutes + ":";
+
+        if(totalSeconds<10) {
+            timeString += "0" + totalSeconds;
+        } else {
+            timeString += totalSeconds;
+        }
+        timeLabel.setText(timeString);
+    }
+
+
+    private void createButtons() {
         playPauseButton = new Button("▶");
         playPauseButton.setPrefWidth(40);
         playPauseButton.setPrefHeight(40);
