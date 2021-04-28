@@ -16,6 +16,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -37,6 +38,7 @@ public class winampWindow extends Application {
     private Stage window;
     private BorderPane mainLayout;
     private Duration duration;
+    private Duration helpDuration = Duration.ZERO;
 
     private Button playPauseButton;
     private Button skipButton;
@@ -106,14 +108,17 @@ public class winampWindow extends Application {
         songListPane.add(songListView,0,1);
         songListPane.setPadding(new Insets(5,5,5,5));
 
-        //progressionBar - listener is working but valueFollower not :(
+        //progressionBar - working
         progressionBar = new Slider();
         progressionBar.setPrefWidth(WIDTH-166);
         progressionBar.valueProperty().addListener((observable, oldValue, newValue) -> {
                 //case where mediaView haven't started yet
-                mediaView.getMediaPlayer().play();
-                mediaPlayer.seek(duration.multiply((Double)newValue/100.0));
-                mediaView.getMediaPlayer().seek(duration.multiply((Double)newValue/100.0));
+                if(mediaView.getMediaPlayer().getStatus() == MediaPlayer.Status.READY)
+                    mediaView.getMediaPlayer().play();
+                if(Math.abs(newValue.floatValue()-oldValue.floatValue())>1.5) {
+                    mediaPlayer.seek(duration.multiply((Double) newValue / 100.0));
+                    mediaView.getMediaPlayer().seek(duration.multiply((Double) newValue / 100.0));
+                }
         });
 
         //test
@@ -205,8 +210,12 @@ public class winampWindow extends Application {
         mediaPlayer.setOnReady(() -> {
             if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN)
             duration = mediaPlayer.getMedia().getDuration();
-            System.out.println(duration);
         });
+        mediaPlayer.currentTimeProperty().addListener((O, oldValue, newValue) -> {
+            if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN && mediaPlayer.getStatus() != MediaPlayer.Status.STOPPED);
+            progressionBar.setValue(newValue.toMillis()/duration.toMillis()*100);
+        });
+
         if(musicFile.contains(".mp4")) {
             mediaView = new MediaView(mediaPlayer);
         } else {
@@ -288,7 +297,6 @@ public class winampWindow extends Application {
         muteButton.setPrefHeight(20);
         muteButton.setPrefWidth(20);
         muteButton.setOnAction(e -> {
-            System.out.println(isMuted);
             if(isMuted) {
                 muteButton.setText("\uD83D\uDD0A");
                 isMuted = true;
