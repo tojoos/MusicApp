@@ -16,6 +16,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -37,6 +38,7 @@ public class winampWindow extends Application {
     private Stage window;
     private BorderPane mainLayout;
     private Duration duration;
+    private Duration helpDuration = Duration.ZERO;
 
     private Button playPauseButton;
     private Button skipButton;
@@ -106,22 +108,22 @@ public class winampWindow extends Application {
         songListPane.add(songListView,0,1);
         songListPane.setPadding(new Insets(5,5,5,5));
 
-        //progressionBar - listener is working but valueFollower not :(
+        //progressionBar - working
         progressionBar = new Slider();
         progressionBar.setPrefWidth(WIDTH-166);
         progressionBar.valueProperty().addListener((observable, oldValue, newValue) -> {
                 //case where mediaView haven't started yet
-                mediaView.getMediaPlayer().play();
-                mediaPlayer.seek(duration.multiply((Double)newValue/100.0));
-                mediaView.getMediaPlayer().seek(duration.multiply((Double)newValue/100.0));
+                if(mediaView.getMediaPlayer().getStatus() == MediaPlayer.Status.READY)
+                    mediaView.getMediaPlayer().play();
+                //assurance value will be changed manually not by listener
+                if(Math.abs(newValue.floatValue()-oldValue.floatValue())>1.5) {
+                    mediaPlayer.seek(duration.multiply((Double) newValue / 100.0));
+                    mediaView.getMediaPlayer().seek(duration.multiply((Double) newValue / 100.0));
+                }
         });
 
         //test
-        timeLabel = new Label("TE:ST/TE:ST");
-        timeLabel.setBackground(new Background(new BackgroundFill
-                (Color.rgb(177,177,177,0.6),
-                        new CornerRadii(2.0),
-                        new Insets(-1))));
+        timeLabel = new Label("0:00/0:00");
         timeLabel.setPrefWidth(65);
 
 
@@ -176,8 +178,6 @@ public class winampWindow extends Application {
             playPauseButton.setText("▶");
         }
 
-
-
         Scene scene = new Scene(mainLayout,WIDTH,HEIGHT);
         //to do - stylesheets
         scene.getStylesheets().add(getClass().getResource("myStyle.css").toString());
@@ -201,12 +201,23 @@ public class winampWindow extends Application {
 
     private void playMusic(String musicFile) { //double opening -> to be fixed
         mediaPlayer = new MediaPlayer(new Media(Paths.get(musicFile).toUri().toString()));
+
         //duration listener (total track length)
         mediaPlayer.setOnReady(() -> {
             if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN)
             duration = mediaPlayer.getMedia().getDuration();
-            System.out.println(duration);
+            //to get default time for first track
+            updateTimeLabel();
         });
+        mediaPlayer.currentTimeProperty().addListener((O, oldValue, newValue) -> {
+            if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN) {
+                progressionBar.setValue(newValue.toMillis() / duration.toMillis() * 100);
+                updateTimeLabel();
+            }
+        });
+
+
+
         if(musicFile.contains(".mp4")) {
             mediaView = new MediaView(mediaPlayer);
         } else {
@@ -244,8 +255,40 @@ public class winampWindow extends Application {
         }
     }
 
-    public void createButtons() {
+    private void updateTimeLabel() {
+        double totalTime = duration.toSeconds();
+        double timeInSec = Math.round(mediaPlayer.getCurrentTime().toSeconds());
+        int minutes=0, seconds;
+        int totalMinutes=0, totalSeconds;
+        String timeString="";
+        if(timeInSec >= 60)
+            minutes = (int) Math.round(timeInSec / 60);
+        seconds = (int) Math.round(timeInSec % 60);
 
+        if(totalTime >= 60)
+            totalMinutes = (int) Math.round(totalTime / 60);
+        totalSeconds = (int) Math.round(totalTime % 60);
+
+        timeString += minutes + ":";
+
+        if(seconds<10) {
+            timeString += "0" + seconds;
+        } else {
+            timeString += seconds;
+        }
+
+        timeString += "/" + totalMinutes + ":";
+
+        if(totalSeconds<10) {
+            timeString += "0" + totalSeconds;
+        } else {
+            timeString += totalSeconds;
+        }
+        timeLabel.setText(timeString);
+    }
+
+
+    private void createButtons() {
         playPauseButton = new Button("▶");
         playPauseButton.setPrefWidth(40);
         playPauseButton.setPrefHeight(40);
@@ -288,7 +331,6 @@ public class winampWindow extends Application {
         muteButton.setPrefHeight(20);
         muteButton.setPrefWidth(20);
         muteButton.setOnAction(e -> {
-            System.out.println(isMuted);
             if(isMuted) {
                 muteButton.setText("\uD83D\uDD0A");
                 isMuted = true;
