@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -27,6 +28,7 @@ public class winampWindow extends Application {
     private static double DEFAULT_VOLUME = 0.3F;
     private double rememberVolume;
     private boolean isMuted = false;
+    private boolean isLooped = false;
 
     private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
 
@@ -44,6 +46,7 @@ public class winampWindow extends Application {
     private Button skipButton;
     private Button prevButton;
     private Button muteButton;
+    private Button loopButton;
 
     private Menu playlistOptions;
     private Menu sortOptions;
@@ -128,7 +131,7 @@ public class winampWindow extends Application {
 
 
         HBox volumeButtons = new HBox(5);
-        volumeButtons.getChildren().addAll(prevButton, playPauseButton, skipButton);
+        volumeButtons.getChildren().addAll(loopButton, prevButton, playPauseButton, skipButton);
 
         HBox volumeControls = new HBox(5);
         volumeControls.getChildren().addAll(muteButton, volumeSlider);
@@ -151,7 +154,6 @@ public class winampWindow extends Application {
         volumePane2.setPadding(new Insets(2,5,5,5));
         volumePane2.add(volumeControls, 29, 0);
         volumePane2.add(volumeButtons, 20, 0);
-
 
         VBox volumeLabel = new VBox(0);
         volumeLabel.setPadding(new Insets(5,5,5,5));
@@ -209,14 +211,13 @@ public class winampWindow extends Application {
             //to get default time for first track
             updateTimeLabel();
         });
+
         mediaPlayer.currentTimeProperty().addListener((O, oldValue, newValue) -> {
             if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN) {
                 progressionBar.setValue(newValue.toMillis() / duration.toMillis() * 100);
                 updateTimeLabel();
             }
         });
-
-
 
         if(musicFile.contains(".mp4")) {
             mediaView = new MediaView(mediaPlayer);
@@ -233,11 +234,15 @@ public class winampWindow extends Application {
         mediaPlayer.play();
         mediaPlayer.setVolume(DEFAULT_VOLUME);
         mediaPlayer.setOnEndOfMedia(() -> {
-            if(songIterator.hasNext()) {
+            if(isLooped) {
+                songIterator.previous();
+            }
+            if (songIterator.hasNext()) {
                 mediaPlayer.stop();
                 mediaView.getMediaPlayer().pause();
                 playMusic(songIterator.next());
             }
+
         });
     }
 
@@ -324,7 +329,6 @@ public class winampWindow extends Application {
                 playMusic(songIterator.previous());
         });
 
-        //mute button - done!
         muteButton = new Button("\uD83D\uDD0A");
         muteButton.getStyleClass().clear();
         muteButton.setStyle("-fx-font-size: 18;");
@@ -340,6 +344,26 @@ public class winampWindow extends Application {
                 isMuted = false;
                 rememberVolume = DEFAULT_VOLUME*100;
                 volumeSlider.setValue(0.0);
+            }
+        });
+
+        loopButton = new Button("\uD83D\uDD01");
+        loopButton.getStyleClass().clear();
+        loopButton.setPrefHeight(15);
+        loopButton.setPrefWidth(20);
+        loopButton.setStyle(
+                "-fx-background-radius: 5;" +
+                "-fx-text-fill: #FFFFFF;" +
+                "-fx-font-weight: bold;");
+        loopButton.setPadding(new Insets(10,0,0,0));
+        loopButton.setAlignment(Pos.CENTER);
+        loopButton.setOnAction(e -> {
+            if(isLooped) {
+                isLooped = false;
+                loopButton.setStyle("-fx-text-fill: #FFFFFF;");
+            } else {
+                isLooped = true;
+                loopButton.setStyle("-fx-text-fill: linear-gradient(#DC9656, #AB4642);");
             }
         });
     }
