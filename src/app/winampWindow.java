@@ -17,7 +17,6 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
-import java.math.BigDecimal;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -29,6 +28,7 @@ public class winampWindow extends Application {
     private double rememberVolume;
     private boolean isMuted = false;
     private boolean isLooped = false;
+    private boolean isShuffled = false;
 
     private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
 
@@ -40,13 +40,13 @@ public class winampWindow extends Application {
     private Stage window;
     private BorderPane mainLayout;
     private Duration duration;
-    private Duration helpDuration = Duration.ZERO;
 
     private Button playPauseButton;
     private Button skipButton;
     private Button prevButton;
     private Button muteButton;
     private Button loopButton;
+    private Button shuffleButton;
 
     private Menu playlistOptions;
     private Menu sortOptions;
@@ -131,7 +131,7 @@ public class winampWindow extends Application {
 
 
         HBox volumeButtons = new HBox(5);
-        volumeButtons.getChildren().addAll(loopButton, prevButton, playPauseButton, skipButton);
+        volumeButtons.getChildren().addAll(loopButton, prevButton, playPauseButton, skipButton, shuffleButton);
 
         HBox volumeControls = new HBox(5);
         volumeControls.getChildren().addAll(muteButton, volumeSlider);
@@ -235,13 +235,38 @@ public class winampWindow extends Application {
         mediaPlayer.setVolume(DEFAULT_VOLUME);
         mediaPlayer.setOnEndOfMedia(() -> {
             if(isLooped) {
+                //looped mode on
                 songIterator.previous();
+            } else {
+                //shuffle mode on - avoids doubling songs
+                int idx;
+                int randomIdx = (int)(Math.random()*(songs.size()));
+                    if(songIterator.hasPrevious()) {
+                        idx = songIterator.previousIndex();
+                        idx++;
+                    } else {
+                        idx = songIterator.nextIndex();
+                        idx--;
+                    }
+                    for(int i=0;i<idx;i++) {
+                        songIterator.previous();
+                    }
+                    while(randomIdx == idx) {
+                        randomIdx = (int) (Math.random() * (songs.size()));
+                    }
+
+                for (int i = 0; i < randomIdx; i++) {
+                    songIterator.next();
+                }
             }
-            if (songIterator.hasNext()) {
+            if(songIterator.hasNext()) {
                 mediaPlayer.stop();
                 mediaView.getMediaPlayer().pause();
-                playMusic(songIterator.next());
+            } else {
+                for(int i=0;i<songs.size();i++)
+                    songIterator.previous();
             }
+            playMusic(songIterator.next());
 
         });
     }
@@ -262,16 +287,16 @@ public class winampWindow extends Application {
 
     private void updateTimeLabel() {
         double totalTime = duration.toSeconds();
-        double timeInSec = Math.round(mediaPlayer.getCurrentTime().toSeconds());
+        double currentTime = Math.round(mediaPlayer.getCurrentTime().toSeconds());
         int minutes=0, seconds;
         int totalMinutes=0, totalSeconds;
         String timeString="";
-        if(timeInSec >= 60)
-            minutes = (int) Math.round(timeInSec / 60);
-        seconds = (int) Math.round(timeInSec % 60);
+        if(currentTime >= 60)
+            minutes = (int) Math.floor(currentTime / 60);
+        seconds = (int) Math.round(currentTime % 60);
 
         if(totalTime >= 60)
-            totalMinutes = (int) Math.round(totalTime / 60);
+            totalMinutes = (int) Math.floor(totalTime / 60);
         totalSeconds = (int) Math.round(totalTime % 60);
 
         timeString += minutes + ":";
@@ -315,8 +340,11 @@ public class winampWindow extends Application {
         skipButton.setOnAction(e -> {
             mediaPlayer.stop();
             mediaView.getMediaPlayer().stop();
-            if(songIterator.hasNext())
-                playMusic(songIterator.next());
+            if (!songIterator.hasNext()) {
+                for (int i = 0; i < songs.size(); i++)
+                    songIterator.previous();
+            }
+            playMusic(songIterator.next());
         });
 
         prevButton = new Button("⏮");
@@ -331,7 +359,7 @@ public class winampWindow extends Application {
 
         muteButton = new Button("\uD83D\uDD0A");
         muteButton.getStyleClass().clear();
-        muteButton.setStyle("-fx-font-size: 18;");
+        muteButton.setStyle("-fx-font-size: 16;");
         muteButton.setPrefHeight(20);
         muteButton.setPrefWidth(20);
         muteButton.setOnAction(e -> {
@@ -352,7 +380,6 @@ public class winampWindow extends Application {
         loopButton.setPrefHeight(15);
         loopButton.setPrefWidth(20);
         loopButton.setStyle(
-                "-fx-background-radius: 5;" +
                 "-fx-text-fill: #FFFFFF;" +
                 "-fx-font-weight: bold;");
         loopButton.setPadding(new Insets(10,0,0,0));
@@ -364,6 +391,25 @@ public class winampWindow extends Application {
             } else {
                 isLooped = true;
                 loopButton.setStyle("-fx-text-fill: linear-gradient(#DC9656, #AB4642);");
+            }
+        });
+
+        shuffleButton = new Button("\uD83D\uDD00");
+        shuffleButton.getStyleClass().clear();
+        shuffleButton.setPrefHeight(20);
+        shuffleButton.setPrefWidth(20);
+        shuffleButton.setStyle(
+                "-fx-text-fill: #FFFFFF;" +
+                "-fx-font-weight: bold;");
+        shuffleButton.setPadding(new Insets(10,0,0,0));
+        shuffleButton.setAlignment(Pos.CENTER);
+        shuffleButton.setOnAction(e -> {
+            if(isShuffled) {
+                isShuffled = false;
+                shuffleButton.setStyle("-fx-text-fill: #FFFFFF;");
+            } else {
+                isShuffled = true;
+                shuffleButton.setStyle("-fx-text-fill: linear-gradient(#DC9656, #AB4642);");
             }
         });
     }
