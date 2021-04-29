@@ -48,6 +48,7 @@ public class winampWindow extends Application {
     private Button loopButton;
     private Button shuffleButton;
 
+
     private Menu playlistOptions;
     private Menu sortOptions;
     private Menu helpOptions;
@@ -107,13 +108,16 @@ public class winampWindow extends Application {
                         new Insets(0))));
 
         GridPane songListPane = new GridPane();
+        songListPane.setHgap(40);
         songListPane.add(playlistLabel,0,0);
-        songListPane.add(songListView,0,1);
+        songListPane.add(songListView,0,1,2,1);
         songListPane.setPadding(new Insets(5,5,5,5));
+
 
         //progressionBar - working
         progressionBar = new Slider();
         progressionBar.setPrefWidth(WIDTH-166);
+        progressionBar.setId("progression-slider");
         progressionBar.valueProperty().addListener((observable, oldValue, newValue) -> {
                 //case where mediaView haven't started yet
                 if(mediaView.getMediaPlayer().getStatus() == MediaPlayer.Status.READY)
@@ -152,7 +156,7 @@ public class winampWindow extends Application {
         volumePane2.setHgap(20);
         volumePane2.setVgap(5);
         volumePane2.setPadding(new Insets(2,5,5,5));
-        volumePane2.add(volumeControls, 29, 0);
+        volumePane2.add(volumeControls, 26, 0);
         volumePane2.add(volumeButtons, 20, 0);
 
         VBox volumeLabel = new VBox(0);
@@ -237,27 +241,9 @@ public class winampWindow extends Application {
             if(isLooped) {
                 //looped mode on
                 songIterator.previous();
-            } else {
+            } else if(isShuffled){
                 //shuffle mode on - avoids doubling songs
-                int idx;
-                int randomIdx = (int)(Math.random()*(songs.size()));
-                    if(songIterator.hasPrevious()) {
-                        idx = songIterator.previousIndex();
-                        idx++;
-                    } else {
-                        idx = songIterator.nextIndex();
-                        idx--;
-                    }
-                    for(int i=0;i<idx;i++) {
-                        songIterator.previous();
-                    }
-                    while(randomIdx == idx) {
-                        randomIdx = (int) (Math.random() * (songs.size()));
-                    }
-
-                for (int i = 0; i < randomIdx; i++) {
-                    songIterator.next();
-                }
+               nextShuffleSongName();
             }
             if(songIterator.hasNext()) {
                 mediaPlayer.stop();
@@ -282,6 +268,28 @@ public class winampWindow extends Application {
             songIterator = songs.listIterator();
         } catch (Exception ex) {
             ex.printStackTrace();
+        }
+    }
+
+    private void nextShuffleSongName() {
+        int idx;
+        int randomIdx = (int)(Math.random()*(songs.size()));
+        if(songIterator.hasPrevious()) {
+            idx = songIterator.previousIndex();
+            idx++;
+        } else {
+            idx = songIterator.nextIndex();
+            idx--;
+        }
+        for(int i=0;i<idx;i++) {
+            songIterator.previous();
+        }
+        while(randomIdx == idx) {
+            randomIdx = (int) (Math.random() * (songs.size()));
+        }
+
+        for (int i = 0; i < randomIdx; i++) {
+            songIterator.next();
         }
     }
 
@@ -340,9 +348,13 @@ public class winampWindow extends Application {
         skipButton.setOnAction(e -> {
             mediaPlayer.stop();
             mediaView.getMediaPlayer().stop();
-            if (!songIterator.hasNext()) {
-                for (int i = 0; i < songs.size(); i++)
-                    songIterator.previous();
+            if(isShuffled) {
+                nextShuffleSongName();
+            } else {
+                if (!songIterator.hasNext()) {
+                    for (int i = 0; i < songs.size(); i++)
+                        songIterator.previous();
+                }
             }
             playMusic(songIterator.next());
         });
@@ -412,6 +424,9 @@ public class winampWindow extends Application {
                 shuffleButton.setStyle("-fx-text-fill: linear-gradient(#DC9656, #AB4642);");
             }
         });
+
+
+
     }
 
     private void createSliders() {
