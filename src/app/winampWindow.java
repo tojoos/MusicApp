@@ -7,18 +7,27 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.ListIterator;
 
 public class winampWindow extends Application {
@@ -35,6 +44,7 @@ public class winampWindow extends Application {
     private final ArrayList<String> songs = new ArrayList<>();
     private ListIterator<String> songIterator;
     private ListView<String> songListView;
+    private ObservableList<String> songList;
     private MediaPlayer mediaPlayer;
     private MediaView mediaView;
     private Stage window;
@@ -47,6 +57,8 @@ public class winampWindow extends Application {
     private Button muteButton;
     private Button loopButton;
     private Button shuffleButton;
+    private Button addNewSongButton;
+    private Button refreshSongListButton;
 
 
     private Menu playlistOptions;
@@ -79,27 +91,7 @@ public class winampWindow extends Application {
         //create sliders (currently only volume slider)
         createSliders();
 
-        ObservableList<String> songList = FXCollections.observableArrayList();
-        songList.addAll(getSongNames());
-        songListView = new ListView<>();
-        songListView.setItems(songList);
-        songListView.setPrefWidth(200);
-        songListView.setPrefHeight(HEIGHT-40);
-        songListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-        songListView.getSelectionModel().selectedItemProperty()
-                .addListener((observable, oldValue, newValue) -> {
-                    String help = songListView.getSelectionModel().getSelectedItem();
-                        songIterator = songs.listIterator();
-                        while(true) {
-                            if((songIterator.next().equals(directory+"\\"+help))) {
-                                break;
-                            }
-                        }
-                        mediaView.getMediaPlayer().stop();
-                        mediaPlayer.stop();
-                        playMusic(directory+"\\"+help);
-                        playPauseButton.setText("⏸");
-                } );
+        createListViewOfSongs();
 
         Label playlistLabel = new Label("Current playlist: Playlist1");
         playlistLabel.setBackground(new Background(new BackgroundFill
@@ -107,9 +99,14 @@ public class winampWindow extends Application {
                         new CornerRadii(2.0),
                         new Insets(0))));
 
+
+        HBox listButtons = new HBox();
+        listButtons.getChildren().addAll(refreshSongListButton,addNewSongButton);
+
         GridPane songListPane = new GridPane();
-        songListPane.setHgap(40);
+        songListPane.setHgap(20);
         songListPane.add(playlistLabel,0,0);
+        songListPane.add(listButtons, 1, 0);
         songListPane.add(songListView,0,1,2,1);
         songListPane.setPadding(new Insets(5,5,5,5));
 
@@ -261,6 +258,7 @@ public class winampWindow extends Application {
     private void loadSongs() {
         try {
             File[] songFiles = directory.listFiles((dir, name) -> name.endsWith("mp3") || name.endsWith("mp4"));
+            songs.clear();
             assert songFiles != null : "No files";
             for (File songFile : songFiles) {
                 songs.add(songFile.toString());
@@ -269,6 +267,32 @@ public class winampWindow extends Application {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    private void createListViewOfSongs() {
+        songList = FXCollections.observableArrayList();
+        songList.addAll(getSongNames());
+        songListView = new ListView<>();
+        songListView.setItems(songList);
+        songListView.setPrefWidth(200);
+        songListView.setPrefHeight(HEIGHT-40);
+        songListView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        songListView.getSelectionModel().selectedItemProperty()
+                .addListener((observable, oldValue, newValue) -> {
+                    String help = songListView.getSelectionModel().getSelectedItem();
+                    if(help != null) {
+                        songIterator = songs.listIterator();
+                        while (true) {
+                            if ((songIterator.next().equals(directory + "\\" + help))) {
+                                break;
+                            }
+                        }
+                        mediaView.getMediaPlayer().stop();
+                        mediaPlayer.stop();
+                        playMusic(directory + "\\" + help);
+                        playPauseButton.setText("⏸");
+                    }
+                });
     }
 
     private void nextShuffleSongName() {
@@ -324,7 +348,6 @@ public class winampWindow extends Application {
         }
         timeLabel.setText(timeString);
     }
-
 
     private void createButtons() {
         playPauseButton = new Button("▶");
@@ -425,8 +448,51 @@ public class winampWindow extends Application {
             }
         });
 
+        addNewSongButton = new Button("+");
+        addNewSongButton.getStyleClass().clear();
+        addNewSongButton.setStyle("-fx-font-size: 14;" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-color: rgb(177, 177, 177, 0.9);" +
+                "-fx-background-radius: 2px;");
+        addNewSongButton.setAlignment(Pos.CENTER);
+        addNewSongButton.setPrefHeight(10);
+        addNewSongButton.setPrefWidth(20);
+        addNewSongButton.setOnAction(e -> browseAndAddSong());
 
+        refreshSongListButton = new Button("\uD83D\uDD04");
+        refreshSongListButton.getStyleClass().clear();
+        refreshSongListButton.setStyle("-fx-font-size: 14;" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-color: rgb(177, 177, 177, 0.9);" +
+                "-fx-background-radius: 2px;");
+        refreshSongListButton.setAlignment(Pos.CENTER);
+        refreshSongListButton.setPrefHeight(10);
+        refreshSongListButton.setPrefWidth(20);
+        refreshSongListButton.setOnAction(e -> refreshSongList());
 
+    }
+
+    private void refreshSongList() {
+        loadSongs();
+        songListView.getItems().clear();
+        songListView.getItems().addAll(getSongNames());
+        songIterator = songs.listIterator();
+    }
+
+    private void browseAndAddSong() {
+        FileChooser songBrowser = new FileChooser();
+        songBrowser.setTitle("Add new song");
+        List<File> songFilesToAdd = songBrowser.showOpenMultipleDialog(window);
+        File destination = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
+        if(songFilesToAdd != null) {
+            for(File f : songFilesToAdd) {
+                try {
+                    Files.copy(f.toPath(),new File(destination +"\\" + f.getName()).toPath(), StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
     }
 
     private void createSliders() {
