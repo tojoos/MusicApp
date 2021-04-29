@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -16,7 +17,6 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
-import java.math.BigDecimal;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.ListIterator;
@@ -27,6 +27,8 @@ public class winampWindow extends Application {
     private static double DEFAULT_VOLUME = 0.3F;
     private double rememberVolume;
     private boolean isMuted = false;
+    private boolean isLooped = false;
+    private boolean isShuffled = false;
 
     private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
 
@@ -38,12 +40,14 @@ public class winampWindow extends Application {
     private Stage window;
     private BorderPane mainLayout;
     private Duration duration;
-    private Duration helpDuration = Duration.ZERO;
 
     private Button playPauseButton;
     private Button skipButton;
     private Button prevButton;
     private Button muteButton;
+    private Button loopButton;
+    private Button shuffleButton;
+
 
     private Menu playlistOptions;
     private Menu sortOptions;
@@ -104,13 +108,16 @@ public class winampWindow extends Application {
                         new Insets(0))));
 
         GridPane songListPane = new GridPane();
+        songListPane.setHgap(40);
         songListPane.add(playlistLabel,0,0);
-        songListPane.add(songListView,0,1);
+        songListPane.add(songListView,0,1,2,1);
         songListPane.setPadding(new Insets(5,5,5,5));
+
 
         //progressionBar - working
         progressionBar = new Slider();
         progressionBar.setPrefWidth(WIDTH-166);
+        progressionBar.setId("progression-slider");
         progressionBar.valueProperty().addListener((observable, oldValue, newValue) -> {
                 //case where mediaView haven't started yet
                 if(mediaView.getMediaPlayer().getStatus() == MediaPlayer.Status.READY)
@@ -128,7 +135,7 @@ public class winampWindow extends Application {
 
 
         HBox volumeButtons = new HBox(5);
-        volumeButtons.getChildren().addAll(prevButton, playPauseButton, skipButton);
+        volumeButtons.getChildren().addAll(loopButton, prevButton, playPauseButton, skipButton, shuffleButton);
 
         HBox volumeControls = new HBox(5);
         volumeControls.getChildren().addAll(muteButton, volumeSlider);
@@ -149,9 +156,8 @@ public class winampWindow extends Application {
         volumePane2.setHgap(20);
         volumePane2.setVgap(5);
         volumePane2.setPadding(new Insets(2,5,5,5));
-        volumePane2.add(volumeControls, 29, 0);
+        volumePane2.add(volumeControls, 26, 0);
         volumePane2.add(volumeButtons, 20, 0);
-
 
         VBox volumeLabel = new VBox(0);
         volumeLabel.setPadding(new Insets(5,5,5,5));
@@ -209,14 +215,13 @@ public class winampWindow extends Application {
             //to get default time for first track
             updateTimeLabel();
         });
+
         mediaPlayer.currentTimeProperty().addListener((O, oldValue, newValue) -> {
             if(mediaPlayer.getStatus() != MediaPlayer.Status.UNKNOWN) {
                 progressionBar.setValue(newValue.toMillis() / duration.toMillis() * 100);
                 updateTimeLabel();
             }
         });
-
-
 
         if(musicFile.contains(".mp4")) {
             mediaView = new MediaView(mediaPlayer);
@@ -233,11 +238,22 @@ public class winampWindow extends Application {
         mediaPlayer.play();
         mediaPlayer.setVolume(DEFAULT_VOLUME);
         mediaPlayer.setOnEndOfMedia(() -> {
+            if(isLooped) {
+                //looped mode on
+                songIterator.previous();
+            } else if(isShuffled){
+                //shuffle mode on - avoids doubling songs
+               nextShuffleSongName();
+            }
             if(songIterator.hasNext()) {
                 mediaPlayer.stop();
                 mediaView.getMediaPlayer().pause();
-                playMusic(songIterator.next());
+            } else {
+                for(int i=0;i<songs.size();i++)
+                    songIterator.previous();
             }
+            playMusic(songIterator.next());
+
         });
     }
 
@@ -255,18 +271,40 @@ public class winampWindow extends Application {
         }
     }
 
+    private void nextShuffleSongName() {
+        int idx;
+        int randomIdx = (int)(Math.random()*(songs.size()));
+        if(songIterator.hasPrevious()) {
+            idx = songIterator.previousIndex();
+            idx++;
+        } else {
+            idx = songIterator.nextIndex();
+            idx--;
+        }
+        for(int i=0;i<idx;i++) {
+            songIterator.previous();
+        }
+        while(randomIdx == idx) {
+            randomIdx = (int) (Math.random() * (songs.size()));
+        }
+
+        for (int i = 0; i < randomIdx; i++) {
+            songIterator.next();
+        }
+    }
+
     private void updateTimeLabel() {
         double totalTime = duration.toSeconds();
-        double timeInSec = Math.round(mediaPlayer.getCurrentTime().toSeconds());
+        double currentTime = Math.round(mediaPlayer.getCurrentTime().toSeconds());
         int minutes=0, seconds;
         int totalMinutes=0, totalSeconds;
         String timeString="";
-        if(timeInSec >= 60)
-            minutes = (int) Math.round(timeInSec / 60);
-        seconds = (int) Math.round(timeInSec % 60);
+        if(currentTime >= 60)
+            minutes = (int) Math.floor(currentTime / 60);
+        seconds = (int) Math.round(currentTime % 60);
 
         if(totalTime >= 60)
-            totalMinutes = (int) Math.round(totalTime / 60);
+            totalMinutes = (int) Math.floor(totalTime / 60);
         totalSeconds = (int) Math.round(totalTime % 60);
 
         timeString += minutes + ":";
@@ -310,8 +348,15 @@ public class winampWindow extends Application {
         skipButton.setOnAction(e -> {
             mediaPlayer.stop();
             mediaView.getMediaPlayer().stop();
-            if(songIterator.hasNext())
-                playMusic(songIterator.next());
+            if(isShuffled) {
+                nextShuffleSongName();
+            } else {
+                if (!songIterator.hasNext()) {
+                    for (int i = 0; i < songs.size(); i++)
+                        songIterator.previous();
+                }
+            }
+            playMusic(songIterator.next());
         });
 
         prevButton = new Button("⏮");
@@ -324,10 +369,9 @@ public class winampWindow extends Application {
                 playMusic(songIterator.previous());
         });
 
-        //mute button - done!
         muteButton = new Button("\uD83D\uDD0A");
         muteButton.getStyleClass().clear();
-        muteButton.setStyle("-fx-font-size: 18;");
+        muteButton.setStyle("-fx-font-size: 16;");
         muteButton.setPrefHeight(20);
         muteButton.setPrefWidth(20);
         muteButton.setOnAction(e -> {
@@ -342,6 +386,47 @@ public class winampWindow extends Application {
                 volumeSlider.setValue(0.0);
             }
         });
+
+        loopButton = new Button("\uD83D\uDD01");
+        loopButton.getStyleClass().clear();
+        loopButton.setPrefHeight(15);
+        loopButton.setPrefWidth(20);
+        loopButton.setStyle(
+                "-fx-text-fill: #FFFFFF;" +
+                "-fx-font-weight: bold;");
+        loopButton.setPadding(new Insets(10,0,0,0));
+        loopButton.setAlignment(Pos.CENTER);
+        loopButton.setOnAction(e -> {
+            if(isLooped) {
+                isLooped = false;
+                loopButton.setStyle("-fx-text-fill: #FFFFFF;");
+            } else {
+                isLooped = true;
+                loopButton.setStyle("-fx-text-fill: linear-gradient(#DC9656, #AB4642);");
+            }
+        });
+
+        shuffleButton = new Button("\uD83D\uDD00");
+        shuffleButton.getStyleClass().clear();
+        shuffleButton.setPrefHeight(20);
+        shuffleButton.setPrefWidth(20);
+        shuffleButton.setStyle(
+                "-fx-text-fill: #FFFFFF;" +
+                "-fx-font-weight: bold;");
+        shuffleButton.setPadding(new Insets(10,0,0,0));
+        shuffleButton.setAlignment(Pos.CENTER);
+        shuffleButton.setOnAction(e -> {
+            if(isShuffled) {
+                isShuffled = false;
+                shuffleButton.setStyle("-fx-text-fill: #FFFFFF;");
+            } else {
+                isShuffled = true;
+                shuffleButton.setStyle("-fx-text-fill: linear-gradient(#DC9656, #AB4642);");
+            }
+        });
+
+
+
     }
 
     private void createSliders() {
