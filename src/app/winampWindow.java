@@ -42,6 +42,7 @@ public class winampWindow extends Application {
     private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
 
     private final ArrayList<String> songs = new ArrayList<>();
+    private final ArrayList<String> durationOfSongs = new ArrayList<>();
     private ListIterator<String> songIterator;
     private ListView<String> songListView;
     private ObservableList<String> songList;
@@ -117,8 +118,10 @@ public class winampWindow extends Application {
         progressionBar.setId("progression-slider");
         progressionBar.valueProperty().addListener((observable, oldValue, newValue) -> {
                 //case where mediaView haven't started yet
-                if(mediaView.getMediaPlayer().getStatus() == MediaPlayer.Status.READY)
+                if(mediaView.getMediaPlayer().getStatus() == MediaPlayer.Status.READY) {
+                    playPauseButton.setText("⏸");
                     mediaView.getMediaPlayer().play();
+                }
                 //assurance value will be changed manually not by listener
                 if(Math.abs(newValue.floatValue()-oldValue.floatValue())>1.5) {
                     mediaPlayer.seek(duration.multiply((Double) newValue / 100.0));
@@ -254,14 +257,19 @@ public class winampWindow extends Application {
         });
     }
 
-
     private void loadSongs() {
         try {
             File[] songFiles = directory.listFiles((dir, name) -> name.endsWith("mp3") || name.endsWith("mp4"));
             songs.clear();
+            durationOfSongs.clear();
             assert songFiles != null : "No files";
             for (File songFile : songFiles) {
                 songs.add(songFile.toString());
+                MediaPlayer mp = new MediaPlayer(new Media(Paths.get(songFile.toString()).toUri().toString()));
+                mp.setOnReady(() -> {
+                    System.out.println("Successfully loaded file: " + songFile.getName() + " with duration: " + durationToFormattedString(mp.getMedia().getDuration()));
+                    durationOfSongs.add(mp.getMedia().getDuration().toString());
+                });
             }
             songIterator = songs.listIterator();
         } catch (Exception ex) {
@@ -317,35 +325,28 @@ public class winampWindow extends Application {
         }
     }
 
-    private void updateTimeLabel() {
-        double totalTime = duration.toSeconds();
-        double currentTime = Math.round(mediaPlayer.getCurrentTime().toSeconds());
-        int minutes=0, seconds;
-        int totalMinutes=0, totalSeconds;
-        String timeString="";
-        if(currentTime >= 60)
-            minutes = (int) Math.floor(currentTime / 60);
-        seconds = (int) Math.round(currentTime % 60);
+    private String durationToFormattedString(Duration duration) {
+        String formattedDuration = "";
+        int minutes = 0, seconds;
+        double totalTimeInSeconds = Math.round(duration.toSeconds());
+        if(totalTimeInSeconds >= 60)
+            minutes = (int) Math.floor(totalTimeInSeconds / 60);
+            seconds = (int) Math.round(totalTimeInSeconds % 60);
 
-        if(totalTime >= 60)
-            totalMinutes = (int) Math.floor(totalTime / 60);
-        totalSeconds = (int) Math.round(totalTime % 60);
-
-        timeString += minutes + ":";
+            formattedDuration += minutes + ":";
 
         if(seconds<10) {
-            timeString += "0" + seconds;
+            formattedDuration += "0" + seconds;
         } else {
-            timeString += seconds;
+            formattedDuration += seconds;
         }
+        return formattedDuration;
+    }
 
-        timeString += "/" + totalMinutes + ":";
-
-        if(totalSeconds<10) {
-            timeString += "0" + totalSeconds;
-        } else {
-            timeString += totalSeconds;
-        }
+    private void updateTimeLabel() {
+        String totalTime = durationToFormattedString(duration);
+        String currentTime = durationToFormattedString(mediaPlayer.getCurrentTime());
+        String timeString = currentTime + "/" + totalTime;
         timeLabel.setText(timeString);
     }
 
@@ -482,6 +483,8 @@ public class winampWindow extends Application {
     private void browseAndAddSong() {
         FileChooser songBrowser = new FileChooser();
         songBrowser.setTitle("Add new song");
+        FileChooser.ExtensionFilter mp4_3ExtensionFilter = new FileChooser.ExtensionFilter("Allowed format: .mp3, .mp4","*.mp3", "*.mp4");
+        songBrowser.getExtensionFilters().add(mp4_3ExtensionFilter);
         List<File> songFilesToAdd = songBrowser.showOpenMultipleDialog(window);
         File destination = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
         if(songFilesToAdd != null) {
