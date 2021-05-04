@@ -42,7 +42,7 @@ public class winampWindow extends Application {
     private final File directory = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
 
     private final ArrayList<String> songs = new ArrayList<>();
-    private final ArrayList<String> durationOfSongs = new ArrayList<>();
+    //private final ArrayList<String> durationOfSongs = new ArrayList<>();
     private ListIterator<String> songIterator;
     private ListView<String> songListView;
     private ObservableList<String> songList;
@@ -60,7 +60,6 @@ public class winampWindow extends Application {
     private Button shuffleButton;
     private Button addNewSongButton;
     private Button refreshSongListButton;
-
 
     private Menu playlistOptions;
     private Menu sortOptions;
@@ -100,7 +99,6 @@ public class winampWindow extends Application {
                         new CornerRadii(2.0),
                         new Insets(0))));
 
-
         HBox listButtons = new HBox();
         listButtons.getChildren().addAll(refreshSongListButton,addNewSongButton);
 
@@ -111,11 +109,10 @@ public class winampWindow extends Application {
         songListPane.add(songListView,0,1,2,1);
         songListPane.setPadding(new Insets(5,5,5,5));
 
-
         //progressionBar - working
         progressionBar = new Slider();
         progressionBar.setPrefWidth(WIDTH-166);
-        progressionBar.setId("progression-slider");
+        //progressionBar.setId("progression-slider");
         progressionBar.valueProperty().addListener((observable, oldValue, newValue) -> {
                 //case where mediaView haven't started yet
                 if(mediaView.getMediaPlayer().getStatus() == MediaPlayer.Status.READY) {
@@ -133,7 +130,6 @@ public class winampWindow extends Application {
         timeLabel = new Label("0:00/0:00");
         timeLabel.setPrefWidth(65);
 
-
         HBox volumeButtons = new HBox(5);
         volumeButtons.getChildren().addAll(loopButton, prevButton, playPauseButton, skipButton, shuffleButton);
 
@@ -148,7 +144,6 @@ public class winampWindow extends Application {
         volumePane.setPadding(new Insets(5,5,2,5));
         volumePane.add(progressionBar,2,0);
         volumePane.add(timeLabel,1,0,1,1);
-
 
         GridPane volumePane2 = new GridPane();
 
@@ -261,14 +256,14 @@ public class winampWindow extends Application {
         try {
             File[] songFiles = directory.listFiles((dir, name) -> name.endsWith("mp3") || name.endsWith("mp4"));
             songs.clear();
-            durationOfSongs.clear();
+            //durationOfSongs.clear();
             assert songFiles != null : "No files";
             for (File songFile : songFiles) {
                 songs.add(songFile.toString());
                 MediaPlayer mp = new MediaPlayer(new Media(Paths.get(songFile.toString()).toUri().toString()));
                 mp.setOnReady(() -> {
                     System.out.println("Successfully loaded file: " + songFile.getName() + " with duration: " + durationToFormattedString(mp.getMedia().getDuration()));
-                    durationOfSongs.add(mp.getMedia().getDuration().toString());
+                    //durationOfSongs.add(mp.getMedia().getDuration().toString());
                 });
             }
             songIterator = songs.listIterator();
@@ -483,7 +478,7 @@ public class winampWindow extends Application {
     private void browseAndAddSong() {
         FileChooser songBrowser = new FileChooser();
         songBrowser.setTitle("Add new song");
-        FileChooser.ExtensionFilter mp4_3ExtensionFilter = new FileChooser.ExtensionFilter("Allowed format: .mp3, .mp4","*.mp3", "*.mp4");
+        FileChooser.ExtensionFilter mp4_3ExtensionFilter = new FileChooser.ExtensionFilter("Allowed formats: .mp3, .mp4","*.mp3", "*.mp4");
         songBrowser.getExtensionFilters().add(mp4_3ExtensionFilter);
         List<File> songFilesToAdd = songBrowser.showOpenMultipleDialog(window);
         File destination = new File("C:\\Users\\joos\\IdeaProjects\\myWinampApp\\src\\app\\songs");
