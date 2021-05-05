@@ -1,7 +1,7 @@
 # MusicApp
-Music application made with JavaFX
+## Music application made with JavaFX
 
-Core futures:
+### Core futures:
 - mp3 + mp4 player
 - adding new tracks via file explorer
 - volume regulamtion
@@ -9,12 +9,12 @@ Core futures:
 - looping song
 - random playing order option
 
-In development:
+### In development:
 - playlist manager
 - graphic style of application
 - more ideas :)
 
-App preview:
+## App preview:
 
 ![Test Image 7](https://user-images.githubusercontent.com/79639840/117154095-d640e980-adbb-11eb-829c-e58b06c1078b.png)
 
