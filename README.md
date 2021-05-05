@@ -16,6 +16,6 @@ In development:
 
 App preview:
 
-(https://user-images.githubusercontent.com/79639840/117154095-d640e980-adbb-11eb-829c-e58b06c1078b.png)
+![Test Image 7](https://user-images.githubusercontent.com/79639840/117154095-d640e980-adbb-11eb-829c-e58b06c1078b.png)
 
 Presented song: ![Screenshot_1]
