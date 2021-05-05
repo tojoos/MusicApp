@@ -10,9 +10,9 @@
 - random playing order option
 
 ### In development:
-- [ ]playlist manager
-- [ ]graphic style of application
-- [ ]more ideas :)
+- [ ] playlist manager
+- [ ] graphic style of application
+- [ ] more ideas :)
 
 ## App preview:
 
