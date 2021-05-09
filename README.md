@@ -16,6 +16,6 @@
 
 ## App preview:
 
-![Test Image 7](https://user-images.githubusercontent.com/79639840/117154095-d640e980-adbb-11eb-829c-e58b06c1078b.png)
+![Test Image 7](https://user-images.githubusercontent.com/79639840/117582636-45dc0f00-b103-11eb-96b9-fb6783f21020.png)
 
 Presented song: [Link to song](https://www.youtube.com/watch?v=cMg8KaMdDYo&t)
